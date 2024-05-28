@@ -43,66 +43,289 @@ The following technologies were used to develop this dashboard:
 ### VBA
 
 In this section, I share some of the key methods and functions developed in VBA (Visual Basic for Applications) used throughout my projects:
-- **Get the data when the file is opened**:
+- **Function to select path**:
   ```
-  Sub Actualizar()
+  Function FnRuta()
 
-    Dim conexion As Variant
-
-    For Each conexion In ActiveWorkbook.Connections
-        conexion.ODBCConnection.BackgroundQuery = False
-    Next conexion
-
-    ActiveWorkbook.RefreshAll
-
-   End Sub
-  ```
-- **Send email when completing calculations**:
-  ```
-  Sub EnviarReporte_O365()
-
-    Dim OApp As Object
-    Dim OMail As Object
-    Dim Body As String
-    Dim RutaImagen As String
-    Dim ArchivoImagen As String
-    Dim NombreArchivo As String
-    Application.ScreenUpdating = False
-    Application.DisplayAlerts = False
-    RutaImagen = "D:\Marco - HP - Sonda\Reportes\SLA N2"
-    NombreArchivo = "Reporte_BCP_SLA-L2"
-    ArchivoImagen = RutaImagen & "\" & NombreArchivo & ".jpg"
-        
-    On Error Resume Next
+    Dim Directorio As String
     
+    With Application.FileDialog(msoFileDialogFolderPicker)
     
-    Call CrearImagenRango_O365(ThisWorkbook.Sheets("Dashboard N2"), RutaImagen, "B1:V50", NombreArchivo)
-    
-    Set OApp = CreateObject("Outlook.Application")
-    Set OMail = OApp.CreateItem(0)
-    Body = "<IMG SRC = """ & ArchivoImagen & """>"
-    Fecha = Format(Now - 1, "dd/mm/yyyy")
-    
-    With OMail
-    
-        .To = Para
-        .CC = CC
-        .Subject = "SLA Nivel 2 - " & (Fecha)
-        .BodyFormat = olFormatHTML
-        .HTMLBody = Body
-        .Display
-        .Send
+        .Title = "Seleccionar Carpeta"
+        .Show
+        Directorio = .SelectedItems(1)
     
     End With
     
-    Set OMail = Nothing
-    Set OApp = Nothing
+    If Directorio <> "" Then
     
-    Application.ScreenUpdating = True
-    Application.DisplayAlerts = True
+        FnRuta = Directorio
+        
+    Else
+    
+        FnRuta = "C:\"
+    
+    End If
 
-   End Sub
+  End Function
   ```
+- **Method to get the files from the path**:
+  ```
+  Sub ListarArchivosInicio()
 
+    Dim Ruta, Archivos As String
+    Dim i As Integer
+    
+    'Abre cuadro de dialogo para abrir el archivo
+    Ruta = FnRuta
+    
+    UserForm1.TXT_Carpeta.Text = Ruta
+    
+    Archivos = Dir(Ruta & "\")
+    
+    Do While Len(Archivos) > 0
+    
+        UserForm1.CB_Archivos.AddItem (Archivos)
+        Archivos = Dir()
+        
+    Loop
+    
+
+  End Sub
+  ```
+- **Function to get the part number from the reports**:
+  ```
+  Function ExtraePN(ByVal Texto As String) As String
+
+    Dim LongitudTexto As Integer
+    Dim PN As String
+    Dim VecesAparece As Integer
+    Dim Posicion As Integer
+    Dim Car As String
+    Dim j As Integer
+    Dim i As Integer
+    
+    LongitudTexto = Len(Texto)
+    VecesAparece = 0
+    Posicion = 0
+    Car = ""
+    
+    'Contamos cuantas veces aparece PN
+    For i = 1 To LongitudTexto
+    
+        Car = Mid(Texto, i, 1)
+        
+        If Car = "P" Then
+        
+            Car = Mid(Texto, i + 1, 1)
+            
+            If Car = "/" Then
+            
+                Car = Mid(Texto, i + 2, 1)
+                
+                If Car = "N" Then
+                
+                    VecesAparece = VecesAparece + 1
+                    Posicion = i
+        
+                    If VecesAparece = 1 Then
+        
+                        j = i + 4
+                        
+                        Car = Mid(Texto, j, 1)
+                        
+                        Do While (Car <> ";")
+                        
+                            PN = PN + Car
+                            
+                            j = j + 1
+                            
+                            If j > LongitudTexto Then
+                            
+                                Car = ";"
+                                
+                            Else
+                            
+                                Car = Mid(Texto, j, 1)
+                            
+                            End If
+                        
+                        Loop
+                        
+                        Else
+                        
+                            j = i + 4
+                            
+                            Car = Mid(Texto, j, 1)
+                            
+                            PN = PN + " / "
+                        
+                            Do While (Car <> ";")
+                        
+                                PN = PN + Car
+                            
+                                j = j + 1
+                            
+                                If j > LongitudTexto Then
+                            
+                                    Car = ";"
+                                
+                                Else
+                            
+                                    Car = Mid(Texto, j, 1)
+                            
+                                End If
+                        
+                            Loop
+        
+                    End If
+                
+                End If
+            
+            End If
+        
+        End If
+        
+    Next i
+    
+    ExtraePN = PN
+    
+  End Function
+  ```
+- **Function to get the description from the reports**:
+  ```
+  Function ExtraeDescripcion(ByVal Texto As String) As String
+
+    Dim LongitudTexto As Integer
+    Dim Descripcion As String
+    Dim VecesAparece As Integer
+    Dim Posicion As Integer
+    Dim Car As String
+    Dim j As Integer
+    Dim i As Integer
+    
+    LongitudTexto = Len(Texto)
+    VecesAparece = 0
+    Posicion = 0
+    Car = ""
+    
+    'Contamos cuantas veces aparece PN
+    For i = 1 To LongitudTexto
+    
+        Car = Mid(Texto, i, 1)
+        
+        If Car = "D" Then
+        
+            Car = Mid(Texto, i + 1, 1)
+            
+            If Car = "E" Then
+            
+                Car = Mid(Texto, i + 2, 1)
+                
+                If Car = "S" Then
+                
+                    Car = Mid(Texto, i + 3, 1)
+                    
+                    If Car = "C" Then
+                    
+                        Car = Mid(Texto, i + 4, 1)
+                        
+                        If Car = "R" Then
+                        
+                            Car = Mid(Texto, i + 5, 1)
+                            
+                            If Car = "I" Then
+                            
+                                Car = Mid(Texto, i + 6, 1)
+                                
+                                If Car = "P" Then
+                                
+                                    Car = Mid(Texto, i + 7, 1)
+                                    
+                                    If Car = "." Then
+                                    
+                                        Car = Mid(Texto, i + 8, 1)
+                                        
+                                        If Car = ":" Then
+                                        
+                                            VecesAparece = VecesAparece + 1
+                                            Posicion = i
+        
+                                            If VecesAparece = 1 Then
+        
+                                                j = i + 9
+                        
+                                                Car = Mid(Texto, j, 1)
+                        
+                                                Do While (Car <> ";")
+                        
+                                                    Descripcion = Descripcion + Car
+                            
+                                                    j = j + 1
+                            
+                                                    If j > LongitudTexto Then
+                            
+                                                        Car = ";"
+                                
+                                                    Else
+                            
+                                                        Car = Mid(Texto, j, 1)
+                            
+                                                    End If
+                        
+                                                Loop
+                        
+                                            Else
+                        
+                                                j = i + 9
+                            
+                                                Car = Mid(Texto, j, 1)
+                            
+                                                Descripcion = Descripcion + " / "
+                        
+                                                Do While (Car <> ";")
+                        
+                                                    Descripcion = Descripcion + Car
+                            
+                                                    j = j + 1
+                            
+                                                    If j > LongitudTexto Then
+                            
+                                                        Car = ";"
+                                
+                                                    Else
+                            
+                                                        Car = Mid(Texto, j, 1)
+                            
+                                                    End If
+                        
+                                                Loop
+        
+                                            End If
+                                        
+                                        End If
+                                    
+                                    End If
+                                
+                                End If
+                            
+                            End If
+                        
+                        End If
+                    
+                    End If
+                
+                End If
+            
+            End If
+        
+        End If
+        
+    Next i
+    
+    ExtraeDescripcion = Descripcion
+    
+  End Function
+  ```
 ## Contacts and Support
 For any questions or support, contact [Marco Chang](mailto:marcochangbegazo@gmail.com).
